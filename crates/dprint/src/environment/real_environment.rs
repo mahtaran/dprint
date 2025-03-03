@@ -81,6 +81,14 @@ impl RealEnvironment {
       }
     };
 
+    // ensure the config directory is created
+    match (*CONFIG_DIR).as_ref() {
+      Ok(config_dir) => config_dir,
+      Err(err) => {
+        bail!("Error creating config directory: {:#}", err);
+      }
+    };
+
     Ok(environment)
   }
 
@@ -277,6 +285,11 @@ impl Environment for RealEnvironment {
   fn get_cache_dir(&self) -> CanonicalizedPathBuf {
     // ok to unwrap because this would have errored in the constructor
     (*CACHE_DIR.as_ref().unwrap()).clone()
+  }
+
+  fn get_config_dir(&self) -> CanonicalizedPathBuf {
+    // ok to unwrap because this would have errored in the constructor
+    (*CONFIG_DIR.as_ref().unwrap()).clone()
   }
 
   fn get_home_dir(&self) -> Option<CanonicalizedPathBuf> {
@@ -482,29 +495,54 @@ const CACHE_DIR_ENV_VAR_NAME: &str = "DPRINT_CACHE_DIR";
 
 static CACHE_DIR: Lazy<Result<CanonicalizedPathBuf>> = Lazy::new(|| {
   #[allow(clippy::disallowed_methods)]
-  let cache_dir = get_cache_dir_internal(|var_name| std::env::var(var_name).ok())?;
+  let cache_dir = get_env_dir_or_default_internal(
+    CACHE_DIR_ENV_VAR_NAME,
+    |var_name| std::env::var(var_name).ok(),
+    || match dirs::cache_dir() {
+      Some(dir) => Ok(dir.join("dprint").join("cache")),
+      None => bail!("Expected to find cache directory"),
+    },
+  )?;
   #[allow(clippy::disallowed_methods)]
   std::fs::create_dir_all(&cache_dir)?;
   canonicalize_path(cache_dir)
 });
 
-fn get_cache_dir_internal(get_env_var: impl Fn(&str) -> Option<String>) -> Result<PathBuf> {
-  if let Some(dir_path) = get_env_var(CACHE_DIR_ENV_VAR_NAME) {
+const CONFIG_DIR_ENV_VAR_NAME: &str = "DPRINT_CONFIG_DIR";
+
+static CONFIG_DIR: Lazy<Result<CanonicalizedPathBuf>> = Lazy::new(|| {
+  #[allow(clippy::disallowed_methods)]
+  let config_dir = get_env_dir_or_default_internal(
+    CONFIG_DIR_ENV_VAR_NAME,
+    |var_name| std::env::var(var_name).ok(),
+    || match dirs::config_dir() {
+      Some(dir) => Ok(dir.join("dprint").join("config")),
+      None => bail!("Expected to find config directory"),
+    },
+  )?;
+  #[allow(clippy::disallowed_methods)]
+  std::fs::create_dir_all(&config_dir)?;
+  canonicalize_path(config_dir)
+});
+
+fn get_env_dir_or_default_internal(
+  var_name: &str,
+  get_env_var: impl FnOnce(&str) -> Option<String>,
+  default_dir: impl FnOnce() -> Result<PathBuf>,
+) -> Result<PathBuf> {
+  if let Some(dir_path) = get_env_var(var_name) {
     if !dir_path.trim().is_empty() {
       let dir_path = PathBuf::from(dir_path);
       // seems dangerous to allow a relative path as this directory may be deleted
       return if !dir_path.is_absolute() {
-        bail!("The {} environment variable must specify an absolute path.", CACHE_DIR_ENV_VAR_NAME)
+        bail!("The {} environment variable must specify an absolute path.", var_name)
       } else {
         Ok(dir_path)
       };
     }
   }
 
-  match dirs::cache_dir() {
-    Some(dir) => Ok(dir.join("dprint").join("cache")),
-    None => bail!("Expected to find cache directory"),
-  }
+  default_dir()
 }
 
 #[cfg(test)]
@@ -514,23 +552,76 @@ mod test {
   #[test]
   fn should_get_cache_dir_based_on_env_var() {
     let default_dir = dirs::cache_dir().unwrap().join("dprint").join("cache");
+    let get_default_dir = || Ok(default_dir.clone());
     let value = if cfg!(target_os = "windows") {
       "C:/.dprint-cache"
     } else {
       "/home/david/.dprint-cache"
     };
-    assert_eq!(get_cache_dir_internal(|_| Some(value.to_string())).unwrap().to_string_lossy(), value);
-    assert_eq!(get_cache_dir_internal(|_| Some("".to_string())).unwrap(), default_dir);
-    assert_eq!(get_cache_dir_internal(|_| Some("  ".to_string())).unwrap(), default_dir);
-    assert_eq!(get_cache_dir_internal(|_| None).unwrap(), default_dir);
+    assert_eq!(
+      get_env_dir_or_default_internal(CACHE_DIR_ENV_VAR_NAME, |_| Some(value.to_string()), || panic!("should not be called"))
+        .unwrap()
+        .to_string_lossy(),
+      value
+    );
+    assert_eq!(
+      get_env_dir_or_default_internal(CACHE_DIR_ENV_VAR_NAME, |_| Some("".to_string()), get_default_dir).unwrap(),
+      default_dir
+    );
+    assert_eq!(
+      get_env_dir_or_default_internal(CACHE_DIR_ENV_VAR_NAME, |_| Some("  ".to_string()), get_default_dir).unwrap(),
+      default_dir
+    );
+    assert_eq!(
+      get_env_dir_or_default_internal(CACHE_DIR_ENV_VAR_NAME, |_| None, get_default_dir).unwrap(),
+      default_dir
+    );
   }
 
   #[test]
   fn should_error_when_cache_dir_env_var_relative() {
-    let result = get_cache_dir_internal(|_| Some("./dir".to_string())).err();
+    let result = get_env_dir_or_default_internal(CACHE_DIR_ENV_VAR_NAME, |_| Some("./dir".to_string()), || panic!("should not be called")).err();
     assert_eq!(
       result.unwrap().to_string(),
       "The DPRINT_CACHE_DIR environment variable must specify an absolute path."
+    );
+  }
+
+  #[test]
+  fn should_get_config_dir_based_on_env_var() {
+    let default_dir = dirs::config_dir().unwrap().join("dprint").join("config");
+    let get_default_dir = || Ok(default_dir.clone());
+    let value = if cfg!(target_os = "windows") {
+      "C:/.dprint-config"
+    } else {
+      "/home/david/.dprint-config"
+    };
+    assert_eq!(
+      get_env_dir_or_default_internal(CONFIG_DIR_ENV_VAR_NAME, |_| Some(value.to_string()), || panic!("should not be called"))
+        .unwrap()
+        .to_string_lossy(),
+      value
+    );
+    assert_eq!(
+      get_env_dir_or_default_internal(CONFIG_DIR_ENV_VAR_NAME, |_| Some("".to_string()), get_default_dir).unwrap(),
+      default_dir
+    );
+    assert_eq!(
+      get_env_dir_or_default_internal(CONFIG_DIR_ENV_VAR_NAME, |_| Some("  ".to_string()), get_default_dir).unwrap(),
+      default_dir
+    );
+    assert_eq!(
+      get_env_dir_or_default_internal(CONFIG_DIR_ENV_VAR_NAME, |_| None, get_default_dir).unwrap(),
+      default_dir
+    );
+  }
+
+  #[test]
+  fn should_error_when_config_dir_env_var_relative() {
+    let result = get_env_dir_or_default_internal(CONFIG_DIR_ENV_VAR_NAME, |_| Some("./dir".to_string()), || panic!("should not be called")).err();
+    assert_eq!(
+      result.unwrap().to_string(),
+      "The DPRINT_CONFIG_DIR environment variable must specify an absolute path."
     );
   }
 
