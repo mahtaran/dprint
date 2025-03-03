@@ -256,7 +256,7 @@ USAGE:
     dprint <SUBCOMMAND> [OPTIONS] [--] [file patterns]...
 
 SUBCOMMANDS:
-  init                    Initializes a configuration file in the current directory.
+  init                    Initializes a configuration file in the current directory, or a global one.
   fmt                     Formats the source files and writes the result to the file system.
   check                   Checks for any files that haven't been formatted.
   config                  Functionality related to the configuration file.
