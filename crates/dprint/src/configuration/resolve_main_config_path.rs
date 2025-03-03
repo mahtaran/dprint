@@ -39,6 +39,13 @@ pub async fn resolve_main_config_path<TEnvironment: Environment>(args: &CliArgs,
       }
     } else if let Some(resolved_config_path) = get_default_config_file_in_ancestor_directories(environment, environment.cwd().as_ref())? {
       resolved_config_path
+    } else if let Some(resolved_config_path) = get_global_config_file(environment)? {
+      log_warn!(
+        environment,
+        "No configuration file found in the current directory, using the global configuration file '{}'.\nConsider creating a local one (dprint init).",
+        resolved_config_path.resolved_path.file_path.display()
+      );
+      resolved_config_path
     } else {
       // just return this even though it doesn't exist
       ResolvedConfigPath {
@@ -75,6 +82,18 @@ pub fn get_default_config_file_in_ancestor_directories(environment: &impl Enviro
   }
 
   Ok(None)
+}
+
+pub fn get_global_config_file(environment: &impl Environment) -> Result<Option<ResolvedConfigPath>> {
+  let path = environment.get_config_dir();
+  if let Some(config_file_path) = get_config_file_in_dir(&path, environment) {
+    return Ok(Some(ResolvedConfigPath {
+      resolved_path: ResolvedPath::local(environment.canonicalize(config_file_path)?),
+      base_path: environment.cwd(),
+    }));
+  } else {
+    Ok(None)
+  }
 }
 
 fn get_config_file_in_dir(dir: impl AsRef<Path>, environment: &impl Environment) -> Option<PathBuf> {
