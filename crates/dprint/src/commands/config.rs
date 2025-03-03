@@ -30,8 +30,13 @@ use crate::utils::pretty_print_json_text;
 use crate::utils::CachedDownloader;
 use crate::utils::PathSource;
 
-pub async fn init_config_file(environment: &impl Environment, config_arg: &Option<String>) -> Result<()> {
-  let config_file_path = get_config_path(config_arg)?;
+pub async fn init_config_file(environment: &impl Environment, config_arg: &Option<String>, global: bool) -> Result<()> {
+  let config_file_path = if global {
+    get_global_config_path(environment)
+  } else {
+    get_config_path(config_arg)
+  }?;
+
   return if !environment.path_exists(&config_file_path) {
     environment.mk_dir_all(config_file_path.parent().unwrap())?;
     environment.write_file(&config_file_path, &get_init_config_file_text(environment).await?)?;
@@ -51,6 +56,10 @@ pub async fn init_config_file(environment: &impl Environment, config_arg: &Optio
     } else {
       PathBuf::from("./dprint.json")
     })
+  }
+
+  fn get_global_config_path(environment: &impl Environment) -> Result<PathBuf> {
+    Ok(environment.get_config_dir().join("dprint.json"))
   }
 }
 
