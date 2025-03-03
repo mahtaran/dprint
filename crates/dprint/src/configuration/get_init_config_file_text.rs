@@ -4,7 +4,21 @@ use dprint_core::plugins::wasm::{self};
 use crate::environment::Environment;
 use crate::plugins::read_info_file;
 
+use super::resolve_main_config_path::get_global_config_file;
+
 pub async fn get_init_config_file_text(environment: &impl Environment) -> Result<String> {
+  if let Ok(Some(global_config)) = get_global_config_file(environment) {
+    let response = environment.get_selection(
+      "Found a global configuration file. Would you like to copy its configuration to the local directory?",
+      0,
+      &[String::from("Yes"), String::from("No")],
+    )?;
+
+    if response == 0 {
+      return environment.read_file(&global_config.resolved_path.file_path);
+    }
+  }
+
   let info = match read_info_file(environment).await {
     Ok(info) => {
       // ok to only check wasm here because the configuration file is only ever initialized with wasm plugins
