@@ -118,7 +118,7 @@ pub struct FmtSubCommand {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ConfigSubCommand {
-  Init,
+  Init { global: bool },
   Update { yes: bool },
   Add(Option<String>),
 }
@@ -226,9 +226,13 @@ fn inner_parse_args<TStdInReader: StdInReader>(args: Vec<String>, std_in_reader:
       list_different: matches.get_flag("list-different"),
       allow_no_files: matches.get_flag("allow-no-files"),
     }),
-    ("init", _) => SubCommand::Config(ConfigSubCommand::Init),
+    ("init", matches) => SubCommand::Config(ConfigSubCommand::Init {
+      global: *matches.get_one::<bool>("global").unwrap(),
+    }),
     ("config", matches) => SubCommand::Config(match matches.subcommand().unwrap() {
-      ("init", _) => ConfigSubCommand::Init,
+      ("init", matches) => ConfigSubCommand::Init {
+        global: *matches.get_one::<bool>("global").unwrap(),
+      },
       ("add", matches) => ConfigSubCommand::Add(matches.get_one::<String>("url-or-plugin-name").map(String::from)),
       ("update", matches) => ConfigSubCommand::Update {
         yes: *matches.get_one::<bool>("yes").unwrap(),
@@ -430,8 +434,9 @@ EXAMPLES:
     )
     .subcommand(
       Command::new("init")
-        .about("Initializes a configuration file in the current directory.")
-    )
+        .about("Initializes a configuration file in the current directory, or a global one.")
+        .arg(Arg::new("global").help("Initializes a global configuration file instead of a local one.").short('g').long("global").action(clap::ArgAction::SetTrue))
+      )
     .subcommand(
       Command::new("fmt")
         .about("Formats the source files and writes the result to the file system.")
@@ -484,7 +489,8 @@ EXAMPLES:
         .subcommand_required(true)
         .subcommand(
           Command::new("init")
-            .about("Initializes a configuration file in the current directory.")
+            .about("Initializes a configuration file in the current directory, or a global one.")
+            .arg(Arg::new("global").help("Initializes a global configuration file instead of a local one.").short('g').long("global").action(clap::ArgAction::SetTrue))
         )
         .subcommand(
           Command::new("update")
