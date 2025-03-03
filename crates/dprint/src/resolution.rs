@@ -26,11 +26,11 @@ use thiserror::Error;
 
 use crate::arg_parser::CliArgs;
 use crate::arg_parser::FilePatternArgs;
-use crate::configuration::get_global_config;
+use crate::configuration::get_common_config;
 use crate::configuration::get_plugin_config_map;
 use crate::configuration::resolve_config_from_args;
 use crate::configuration::resolve_config_from_path;
-use crate::configuration::GlobalConfigDiagnostic;
+use crate::configuration::CommonConfigDiagnostic;
 use crate::configuration::ResolveConfigError;
 use crate::configuration::ResolvedConfig;
 use crate::configuration::ResolvedConfigPath;
@@ -96,7 +96,7 @@ impl PluginWithConfig {
         hasher.write(association.as_bytes());
       }
     }
-    self.format_config.global.hash(hasher);
+    self.format_config.common.hash(hasher);
   }
 
   pub fn name(&self) -> &str {
@@ -205,7 +205,7 @@ pub struct PluginsScope<TEnvironment: Environment> {
   pub config: Option<Rc<ResolvedConfig>>,
   pub plugins: IndexMap<String, Rc<PluginWithConfig>>,
   pub plugin_name_maps: PluginNameResolutionMaps,
-  global_config_diagnostics: Vec<GlobalConfigDiagnostic>,
+  common_config_diagnostics: Vec<CommonConfigDiagnostic>,
   cached_editor_file_matcher: RefCell<Option<FileMatcher<TEnvironment>>>,
 }
 
@@ -214,7 +214,7 @@ impl<TEnvironment: Environment> PluginsScope<TEnvironment> {
     environment: TEnvironment,
     plugins: Vec<Rc<PluginWithConfig>>,
     config: Rc<ResolvedConfig>,
-    global_config_diagnostics: Vec<GlobalConfigDiagnostic>,
+    common_config_diagnostics: Vec<CommonConfigDiagnostic>,
   ) -> Result<Self> {
     let plugin_name_maps = PluginNameResolutionMaps::from_plugins(plugins.iter().map(|p| p.as_ref()), &config.base_path)?;
 
@@ -223,13 +223,13 @@ impl<TEnvironment: Environment> PluginsScope<TEnvironment> {
       config: Some(config),
       plugin_name_maps,
       plugins: plugins.into_iter().map(|p| (p.name().to_string(), p)).collect(),
-      global_config_diagnostics,
+      common_config_diagnostics,
       cached_editor_file_matcher: Default::default(),
     })
   }
 
   pub fn ensure_valid_for_cli_args(&self, cli_args: &CliArgs) -> Result<()> {
-    self.ensure_no_global_config_diagnostics()?;
+    self.ensure_no_common_config_diagnostics()?;
     self.ensure_plugins_found()?;
     // Skip checking these diagnostics when the user provides
     // plugins from the CLI args. They may be doing this to filter
@@ -248,31 +248,31 @@ impl<TEnvironment: Environment> PluginsScope<TEnvironment> {
     }
   }
 
-  pub fn ensure_no_global_config_diagnostics(&self) -> Result<(), ResolveConfigError> {
-    if self.global_config_diagnostics.is_empty() {
+  pub fn ensure_no_common_config_diagnostics(&self) -> Result<(), ResolveConfigError> {
+    if self.common_config_diagnostics.is_empty() {
       return Ok(());
     }
     let diagnostics = self
-      .global_config_diagnostics
+      .common_config_diagnostics
       .iter()
       .filter_map(|d| match d {
-        GlobalConfigDiagnostic::UnknownProperty(_) => None,
-        GlobalConfigDiagnostic::Other(d) => Some(d.to_string()),
+        CommonConfigDiagnostic::UnknownProperty(_) => None,
+        CommonConfigDiagnostic::Other(d) => Some(d.to_string()),
       })
       .collect::<Vec<_>>();
     self.error_for_diagnostics(&diagnostics)
   }
 
   pub fn ensure_no_unknown_config_property_diagnostics(&self) -> Result<(), ResolveConfigError> {
-    if self.global_config_diagnostics.is_empty() {
+    if self.common_config_diagnostics.is_empty() {
       return Ok(());
     }
     let diagnostics = self
-      .global_config_diagnostics
+      .common_config_diagnostics
       .iter()
       .filter_map(|d| match d {
-        GlobalConfigDiagnostic::UnknownProperty(d) => Some(d.to_string()),
-        GlobalConfigDiagnostic::Other(_) => None,
+        CommonConfigDiagnostic::UnknownProperty(d) => Some(d.to_string()),
+        CommonConfigDiagnostic::Other(_) => None,
       })
       .collect::<Vec<_>>();
     self.error_for_diagnostics(&diagnostics)
@@ -536,7 +536,7 @@ pub async fn get_plugins_scope_from_args<TEnvironment: Environment>(
       config: None,
       plugin_name_maps: Default::default(),
       plugins: Default::default(),
-      global_config_diagnostics: Default::default(),
+      common_config_diagnostics: Default::default(),
       cached_editor_file_matcher: Default::default(),
     }),
   }
@@ -565,19 +565,19 @@ pub async fn resolve_plugins_scope<TEnvironment: Environment>(
     plugins_with_config.push((get_plugin_config_map(&plugin, &mut config_map)?, plugin));
   }
 
-  // now get global config
-  let global_config_result = get_global_config(config_map);
-  let global_config = global_config_result.config;
+  // now get common config
+  let common_config_result = get_common_config(config_map);
+  let common_config = common_config_result.config;
 
   // create the scope
   let plugins = plugins_with_config.into_iter().map(|(plugin_config, plugin)| {
-    let global_config = global_config.clone();
+    let common_config = common_config.clone();
     let next_config_id = plugin_resolver.next_config_id();
     async move {
       let instance = plugin.initialize().await?;
       let format_config = Arc::new(FormatConfig {
         id: next_config_id,
-        global: global_config,
+        common: common_config,
         plugin: plugin_config.properties,
       });
       let file_matching_info = instance.file_matching_info(format_config.clone()).await?;
@@ -596,5 +596,5 @@ pub async fn resolve_plugins_scope<TEnvironment: Environment>(
     plugins.push(result?);
   }
 
-  Ok(PluginsScope::new(environment.clone(), plugins, config, global_config_result.diagnostics)?)
+  Ok(PluginsScope::new(environment.clone(), plugins, config, common_config_result.diagnostics)?)
 }

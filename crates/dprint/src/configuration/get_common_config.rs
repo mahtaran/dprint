@@ -1,64 +1,64 @@
+use dprint_core::configuration::CommonConfiguration;
 use dprint_core::configuration::ConfigKeyMap;
 use dprint_core::configuration::ConfigurationDiagnostic;
-use dprint_core::configuration::GlobalConfiguration;
 
 use super::ConfigMap;
 use super::ConfigMapValue;
 
-pub enum GlobalConfigDiagnostic {
+pub enum CommonConfigDiagnostic {
   UnknownProperty(ConfigurationDiagnostic),
   Other(ConfigurationDiagnostic),
 }
 
-impl std::fmt::Display for GlobalConfigDiagnostic {
+impl std::fmt::Display for CommonConfigDiagnostic {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      GlobalConfigDiagnostic::UnknownProperty(diagnostic) => diagnostic.fmt(f),
-      GlobalConfigDiagnostic::Other(diagnostic) => diagnostic.fmt(f),
+      CommonConfigDiagnostic::UnknownProperty(diagnostic) => diagnostic.fmt(f),
+      CommonConfigDiagnostic::Other(diagnostic) => diagnostic.fmt(f),
     }
   }
 }
 
-pub struct GlobalConfigurationResult {
-  pub config: GlobalConfiguration,
-  pub diagnostics: Vec<GlobalConfigDiagnostic>,
+pub struct CommonConfigurationResult {
+  pub config: CommonConfiguration,
+  pub diagnostics: Vec<CommonConfigDiagnostic>,
 }
 
-pub fn get_global_config(mut config_map: ConfigMap) -> GlobalConfigurationResult {
+pub fn get_common_config(mut config_map: ConfigMap) -> CommonConfigurationResult {
   let mut diagnostics = Vec::new();
 
   // ignore this property
   config_map.shift_remove("$schema");
 
-  // now get and resolve the global config
-  let mut global_config = get_global_config_from_config_map(&mut diagnostics, config_map);
-  let global_config_result = dprint_core::configuration::resolve_global_config(&mut global_config);
-  diagnostics.extend(global_config_result.diagnostics.into_iter().map(GlobalConfigDiagnostic::Other));
+  // now get and resolve the common config
+  let mut common_config = get_common_config_from_config_map(&mut diagnostics, config_map);
+  let common_config_result = dprint_core::configuration::resolve_common_config(&mut common_config);
+  diagnostics.extend(common_config_result.diagnostics.into_iter().map(CommonConfigDiagnostic::Other));
 
-  let unknown_property_diagnostics = dprint_core::configuration::get_unknown_property_diagnostics(global_config);
-  diagnostics.extend(unknown_property_diagnostics.into_iter().map(GlobalConfigDiagnostic::UnknownProperty));
+  let unknown_property_diagnostics = dprint_core::configuration::get_unknown_property_diagnostics(common_config);
+  diagnostics.extend(unknown_property_diagnostics.into_iter().map(CommonConfigDiagnostic::UnknownProperty));
 
-  return GlobalConfigurationResult {
-    config: global_config_result.config,
+  return CommonConfigurationResult {
+    config: common_config_result.config,
     diagnostics,
   };
 
-  fn get_global_config_from_config_map(diagnostics: &mut Vec<GlobalConfigDiagnostic>, config_map: ConfigMap) -> ConfigKeyMap {
+  fn get_common_config_from_config_map(diagnostics: &mut Vec<CommonConfigDiagnostic>, config_map: ConfigMap) -> ConfigKeyMap {
     // at this point, there should only be key values inside the hash map
-    let mut global_config = ConfigKeyMap::new();
+    let mut common_config = ConfigKeyMap::new();
 
     for (key, value) in config_map.into_iter() {
       if let ConfigMapValue::KeyValue(value) = value {
-        global_config.insert(key, value);
+        common_config.insert(key, value);
       } else {
-        diagnostics.push(GlobalConfigDiagnostic::UnknownProperty(ConfigurationDiagnostic {
+        diagnostics.push(CommonConfigDiagnostic::UnknownProperty(ConfigurationDiagnostic {
           property_name: key,
           message: "Unexpected non-string, boolean, or int property".to_string(),
         }));
       }
     }
 
-    global_config
+    common_config
   }
 }
 
@@ -70,7 +70,7 @@ mod tests {
   use crate::configuration::ConfigMap;
 
   #[test]
-  fn should_get_global_config() {
+  fn should_get_common_config() {
     let mut config_map = ConfigMap::new();
     config_map.insert(String::from("lineWidth"), ConfigMapValue::from_i32(80));
     config_map.insert(String::from("useTabs"), ConfigMapValue::from_bool(true));
@@ -78,7 +78,7 @@ mod tests {
     config_map.insert(String::from("newLineKind"), ConfigMapValue::from_str("crlf"));
     assert_result(
       config_map,
-      GlobalConfiguration {
+      CommonConfiguration {
         line_width: Some(80),
         use_tabs: Some(true),
         indent_width: Some(2),
@@ -89,12 +89,12 @@ mod tests {
   }
 
   #[test]
-  fn should_get_global_for_system_new_line_kind() {
+  fn should_get_common_for_system_new_line_kind() {
     let mut config_map = ConfigMap::new();
     config_map.insert(String::from("newLineKind"), ConfigMapValue::from_str("system"));
     assert_result(
       config_map,
-      GlobalConfiguration {
+      CommonConfiguration {
         line_width: None,
         use_tabs: None,
         indent_width: None,
@@ -114,7 +114,7 @@ mod tests {
     config_map.insert(String::from("test"), ConfigMapValue::PluginConfig(Default::default()));
     assert_result(
       config_map,
-      GlobalConfiguration {
+      CommonConfiguration {
         line_width: None,
         use_tabs: None,
         indent_width: None,
@@ -131,7 +131,7 @@ mod tests {
     config_map.insert(String::from("unknownProperty"), ConfigMapValue::from_i32(80));
     assert_result(
       config_map,
-      GlobalConfiguration {
+      CommonConfiguration {
         line_width: None,
         use_tabs: None,
         indent_width: None,
@@ -150,7 +150,7 @@ mod tests {
     config_map.insert(String::from("$schema"), ConfigMapValue::from_str("test"));
     assert_result(
       config_map,
-      GlobalConfiguration {
+      CommonConfiguration {
         line_width: None,
         use_tabs: None,
         indent_width: None,
@@ -161,9 +161,9 @@ mod tests {
   }
 
   #[track_caller]
-  fn assert_result(config_map: ConfigMap, global_config: GlobalConfiguration, diagnostics: &[&str]) {
-    let result = get_global_config(config_map);
-    assert_eq!(result.config, global_config);
+  fn assert_result(config_map: ConfigMap, common_config: CommonConfiguration, diagnostics: &[&str]) {
+    let result = get_common_config(config_map);
+    assert_eq!(result.config, common_config);
     assert_eq!(
       result.diagnostics.into_iter().map(|d| d.to_string()).collect::<Vec<_>>(),
       diagnostics.into_iter().map(|d| d.to_string()).collect::<Vec<_>>()

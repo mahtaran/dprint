@@ -229,7 +229,7 @@ Alternatively, specify `--incremental=false` on the CLI:
 dprint fmt --incremental=false
 ```
 
-## Global Configuration
+## Common Configuration
 
 There are certain non-language specific configuration that can be specified. These are specified on the main configuration object, but can be overridden on a per-plugin basis.
 
@@ -252,7 +252,7 @@ For example:
 }
 ```
 
-Note: dprint does not provide or enforce any defaults for the global configuration. The defaults are set on a per plugin basis. When a value is not provided, the plugin may choose to use its default.
+Note: dprint does not provide or enforce any defaults for the common configuration. The defaults are set on a per plugin basis. When a value is not provided, the plugin may choose to use its default.
 
 ### `lineWidth`
 

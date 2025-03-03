@@ -7,10 +7,10 @@ use crate::async_runtime::FutureExt;
 #[cfg(feature = "async_runtime")]
 use crate::async_runtime::LocalBoxFuture;
 
+use crate::configuration::CommonConfiguration;
 use crate::configuration::ConfigKeyMap;
 use crate::configuration::ConfigKeyValue;
 use crate::configuration::ConfigurationDiagnostic;
-use crate::configuration::GlobalConfiguration;
 use crate::plugins::PluginInfo;
 
 use super::FileMatchingInfo;
@@ -108,7 +108,7 @@ pub type FormatResult = Result<Option<Vec<u8>>>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RawFormatConfig {
   pub plugin: ConfigKeyMap,
-  pub global: GlobalConfiguration,
+  pub common: CommonConfiguration,
 }
 
 /// A unique configuration id used for formatting.
@@ -225,8 +225,8 @@ pub trait AsyncPluginHandler: 'static {
   fn plugin_info(&self) -> PluginInfo;
   /// Gets the plugin's license text.
   fn license_text(&self) -> String;
-  /// Resolves configuration based on the provided config map and global configuration.
-  async fn resolve_config(&self, config: ConfigKeyMap, global_config: GlobalConfiguration) -> PluginResolveConfigurationResult<Self::Configuration>;
+  /// Resolves configuration based on the provided config map and common configuration.
+  async fn resolve_config(&self, config: ConfigKeyMap, common_config: CommonConfiguration) -> PluginResolveConfigurationResult<Self::Configuration>;
   /// Updates the config key map. This will be called after the CLI has upgraded the
   /// plugin in `dprint config update`.
   async fn check_config_updates(&self, _message: CheckConfigUpdatesMessage) -> Result<Vec<ConfigChange>> {
@@ -243,8 +243,8 @@ pub trait AsyncPluginHandler: 'static {
 /// Trait for implementing a Wasm plugin.
 #[cfg(feature = "wasm")]
 pub trait SyncPluginHandler<TConfiguration: Clone + serde::Serialize> {
-  /// Resolves configuration based on the provided config map and global configuration.
-  fn resolve_config(&mut self, config: ConfigKeyMap, global_config: &GlobalConfiguration) -> PluginResolveConfigurationResult<TConfiguration>;
+  /// Resolves configuration based on the provided config map and common configuration.
+  fn resolve_config(&mut self, config: ConfigKeyMap, common_config: &CommonConfiguration) -> PluginResolveConfigurationResult<TConfiguration>;
   /// Gets the plugin's plugin info.
   fn plugin_info(&mut self) -> PluginInfo;
   /// Gets the plugin's license text.

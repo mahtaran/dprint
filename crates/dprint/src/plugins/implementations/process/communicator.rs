@@ -128,7 +128,7 @@ impl<TEnvironment: Environment> InitializedProcessPluginCommunicator<TEnvironmen
     let inner = self.inner.lock().await;
     let has_config = inner.registered_configs.borrow_mut().contains(&config.id);
     if !has_config {
-      inner.communicator.register_config(config.id, &config.global, &config.plugin).await?;
+      inner.communicator.register_config(config.id, &config.common, &config.plugin).await?;
       inner.registered_configs.borrow_mut().insert(config.id);
     }
     Ok(inner.communicator.clone())
@@ -179,7 +179,7 @@ mod test {
             config.insert("ending".to_string(), "custom".to_string().into());
             config
           },
-          global: Default::default(),
+          common: Default::default(),
         });
 
         // ensure basic formatting works
@@ -270,7 +270,7 @@ mod test {
         let format_config = Arc::new(FormatConfig {
           id: FormatConfigId::from_raw(1),
           plugin: Default::default(),
-          global: Default::default(),
+          common: Default::default(),
         });
 
         // start up a format that will wait for cancellation

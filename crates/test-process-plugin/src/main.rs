@@ -7,10 +7,10 @@ use dprint_core::async_runtime::LocalBoxFuture;
 use dprint_core::configuration::get_nullable_vec;
 use dprint_core::configuration::get_unknown_property_diagnostics;
 use dprint_core::configuration::get_value;
+use dprint_core::configuration::CommonConfiguration;
 use dprint_core::configuration::ConfigKeyMap;
 use dprint_core::configuration::ConfigKeyValue;
 use dprint_core::configuration::ConfigurationDiagnostic;
-use dprint_core::configuration::GlobalConfiguration;
 use dprint_core::plugins::process::get_parent_process_id_from_cli_args;
 use dprint_core::plugins::process::handle_process_stdio_messages;
 use dprint_core::plugins::process::start_parent_process_checker_task;
@@ -79,7 +79,7 @@ impl AsyncPluginHandler for TestProcessPluginHandler {
     "License text.".to_string()
   }
 
-  async fn resolve_config(&self, config: ConfigKeyMap, global_config: GlobalConfiguration) -> PluginResolveConfigurationResult<Configuration> {
+  async fn resolve_config(&self, config: ConfigKeyMap, common_config: CommonConfiguration) -> PluginResolveConfigurationResult<Configuration> {
     fn get_string_vec(config: &mut ConfigKeyMap, key: &str, diagnostics: &mut Vec<ConfigurationDiagnostic>) -> Option<Vec<String>> {
       get_nullable_vec(
         config,
@@ -101,7 +101,7 @@ impl AsyncPluginHandler for TestProcessPluginHandler {
     let mut config = config;
     let mut diagnostics = Vec::new();
     let ending = get_value(&mut config, "ending", String::from("formatted_process"), &mut diagnostics);
-    let line_width = get_value(&mut config, "line_width", global_config.line_width.unwrap_or(120), &mut diagnostics);
+    let line_width = get_value(&mut config, "line_width", common_config.line_width.unwrap_or(120), &mut diagnostics);
 
     let file_extensions = get_string_vec(&mut config, "file_extensions", &mut diagnostics).unwrap_or_else(|| vec!["txt_ps".to_string()]);
     let file_names = get_string_vec(&mut config, "file_names", &mut diagnostics).unwrap_or_else(|| vec!["test-process-plugin-exact-file".to_string()]);

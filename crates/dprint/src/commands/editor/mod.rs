@@ -60,7 +60,7 @@ pub async fn output_editor_info<TEnvironment: Environment>(
   let mut plugins = Vec::new();
   let scope = get_plugins_scope_from_args(args, environment, plugin_resolver).await?;
 
-  scope.ensure_no_global_config_diagnostics()?;
+  scope.ensure_no_common_config_diagnostics()?;
 
   for plugin in scope.plugins.values() {
     let initialized_plugin = plugin.initialize().await?;
@@ -273,7 +273,7 @@ impl<'a, TEnvironment: Environment> EditorService<'a, TEnvironment> {
       self.plugin_resolver.clear_and_shutdown_initialized().await;
 
       let scope = resolve_plugins_scope(config.clone(), self.environment, self.plugin_resolver).await?;
-      scope.ensure_no_global_config_diagnostics()?;
+      scope.ensure_no_common_config_diagnostics()?;
       self.plugins_scope = Some(Rc::new(scope));
     }
 

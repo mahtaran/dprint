@@ -25,6 +25,7 @@ use super::WasmInstance;
 
 mod v3;
 mod v4;
+mod v5;
 
 pub type WasmHostFormatSender = tokio::sync::mpsc::UnboundedSender<(HostFormatRequest, std::sync::mpsc::Sender<FormatResult>)>;
 
@@ -32,6 +33,7 @@ pub type WasmHostFormatSender = tokio::sync::mpsc::UnboundedSender<(HostFormatRe
 pub enum PluginSchemaVersion {
   V3,
   V4,
+  V5,
 }
 
 pub trait ImportObjectEnvironment {
@@ -61,6 +63,7 @@ pub fn create_wasm_plugin_instance(store: Store, instance: WasmInstance) -> Resu
   match instance.version() {
     PluginSchemaVersion::V3 => Ok(Box::new(v3::InitializedWasmPluginInstanceV3::new(store, instance)?)),
     PluginSchemaVersion::V4 => Ok(Box::new(v4::InitializedWasmPluginInstanceV4::new(store, instance)?)),
+    PluginSchemaVersion::V5 => Ok(Box::new(v5::InitializedWasmPluginInstanceV5::new(store, instance)?)),
   }
 }
 
@@ -69,6 +72,7 @@ pub fn create_identity_import_object(version: PluginSchemaVersion, store: &mut S
   match version {
     PluginSchemaVersion::V3 => v3::create_identity_import_object(store),
     PluginSchemaVersion::V4 => v4::create_identity_import_object(store),
+    PluginSchemaVersion::V5 => v5::create_identity_import_object(store),
   }
 }
 
@@ -83,6 +87,7 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
   match version {
     PluginSchemaVersion::V3 => v3::create_pools_import_object(store, host_format_sender),
     PluginSchemaVersion::V4 => v4::create_pools_import_object(environment, plugin_name.to_string(), store, host_format_sender),
+    PluginSchemaVersion::V5 => v5::create_pools_import_object(environment, plugin_name.to_string(), store, host_format_sender),
   }
 }
 
@@ -107,7 +112,8 @@ pub fn get_current_plugin_schema_version(module: &wasmer::Module) -> Result<Plug
   match plugin_schema_version {
     3 => Ok(PluginSchemaVersion::V3),
     4 => Ok(PluginSchemaVersion::V4),
-    version if version > 4 => {
+    5 => Ok(PluginSchemaVersion::V5),
+    version if version > 5 => {
       bail!(
         "Invalid schema version: {} -- Expected: {}. Upgrade your dprint CLI ({}).",
         plugin_schema_version,

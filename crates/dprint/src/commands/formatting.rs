@@ -36,7 +36,7 @@ pub async fn stdin_fmt<TEnvironment: Environment>(
   let config = Rc::new(resolve_config_from_args(args, environment).await?);
   let plugins_scope = Rc::new(resolve_plugins_scope(config, environment, plugin_resolver).await?);
   plugins_scope.ensure_plugins_found()?;
-  plugins_scope.ensure_no_global_config_diagnostics()?;
+  plugins_scope.ensure_no_common_config_diagnostics()?;
 
   // if the path is absolute, then apply exclusion rules
   if environment.is_absolute_path(&cmd.file_name_or_path) {
@@ -1573,7 +1573,7 @@ mod test {
     assert_eq!(environment.take_stdout_messages(), vec![get_singular_formatted_text()]);
     assert_eq!(environment.read_file(&file_path1).unwrap(), "asdf_formatted");
 
-    // update the global config and ensure it's formatted
+    // update the common config and ensure it's formatted
     environment
       .write_file(
         "./dprint.json",
