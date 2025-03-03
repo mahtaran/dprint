@@ -5,9 +5,9 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
+use dprint_core::configuration::CommonConfiguration;
 use dprint_core::configuration::ConfigKeyMap;
 use dprint_core::configuration::ConfigurationDiagnostic;
-use dprint_core::configuration::GlobalConfiguration;
 use dprint_core::plugins::CancellationToken;
 use dprint_core::plugins::CheckConfigUpdatesMessage;
 use dprint_core::plugins::ConfigChange;
@@ -288,8 +288,8 @@ impl InitializedWasmPluginInstanceV3 {
     })
   }
 
-  fn set_global_config(&mut self, global_config: &GlobalConfiguration) -> Result<()> {
-    let json = serde_json::to_string(global_config)?;
+  fn set_common_config(&mut self, common_config: &CommonConfiguration) -> Result<()> {
+    let json = serde_json::to_string(common_config)?;
     self.send_string(&json)?;
     self.wasm_functions.set_global_config()?;
     Ok(())
@@ -347,7 +347,7 @@ impl InitializedWasmPluginInstanceV3 {
       // set this to uninitialized in case it errors below
       self.current_config_id = FormatConfigId::uninitialized();
       // update the plugin
-      self.set_global_config(&config.global)?;
+      self.set_common_config(&config.common)?;
       self.set_plugin_config(&config.plugin)?;
       // now mark this as successfully set
       self.current_config_id = config.id;

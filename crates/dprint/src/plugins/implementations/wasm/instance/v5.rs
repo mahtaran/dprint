@@ -77,7 +77,7 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
   store: &mut Store,
   host_format_sender: WasmHostFormatSender,
 ) -> (wasmer::Imports, Box<dyn ImportObjectEnvironment>) {
-  struct ImportObjectEnvironmentV4<TEnvironment: Environment> {
+  struct ImportObjectEnvironmentV5<TEnvironment: Environment> {
     environment: TEnvironment,
     plugin_name: String,
     memory: Option<Memory>,
@@ -88,7 +88,7 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
     host_format_sender: WasmHostFormatSender,
   }
 
-  impl<TEnvironment: Environment> ImportObjectEnvironment for FunctionEnv<ImportObjectEnvironmentV4<TEnvironment>> {
+  impl<TEnvironment: Environment> ImportObjectEnvironment for FunctionEnv<ImportObjectEnvironmentV5<TEnvironment>> {
     fn initialize(&self, store: &mut Store, instance: &Instance) -> Result<(), ExportError> {
       self.as_mut(store).memory = Some(instance.exports.get_memory("memory")?.clone());
       Ok(())
@@ -100,7 +100,7 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
   }
 
   fn fd_write<TEnvironment: Environment>(
-    env: FunctionEnvMut<ImportObjectEnvironmentV4<TEnvironment>>,
+    env: FunctionEnvMut<ImportObjectEnvironmentV5<TEnvironment>>,
     fd: u32,
     iovs_ptr: u32,
     iovs_len: u32,
@@ -158,7 +158,7 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
     0
   }
 
-  fn host_write_buffer<TEnvironment: Environment>(env: FunctionEnvMut<ImportObjectEnvironmentV4<TEnvironment>>, buffer_pointer: u32) {
+  fn host_write_buffer<TEnvironment: Environment>(env: FunctionEnvMut<ImportObjectEnvironmentV5<TEnvironment>>, buffer_pointer: u32) {
     let buffer_pointer: wasmer::WasmPtr<u32> = wasmer::WasmPtr::new(buffer_pointer);
     let env_data = env.data();
     let memory = env_data.memory.as_ref().unwrap();
@@ -170,7 +170,7 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
 
   #[allow(clippy::too_many_arguments)]
   fn host_format<TEnvironment: Environment>(
-    mut env: FunctionEnvMut<ImportObjectEnvironmentV4<TEnvironment>>,
+    mut env: FunctionEnvMut<ImportObjectEnvironmentV5<TEnvironment>>,
     file_path_ptr: u32,
     file_path_len: u32,
     range_start: u32,
@@ -246,7 +246,7 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
     }
   }
 
-  fn host_get_formatted_text<TEnvironment: Environment>(mut env: FunctionEnvMut<ImportObjectEnvironmentV4<TEnvironment>>) -> u32 {
+  fn host_get_formatted_text<TEnvironment: Environment>(mut env: FunctionEnvMut<ImportObjectEnvironmentV5<TEnvironment>>) -> u32 {
     let env = env.data_mut();
     let formatted_bytes = std::mem::take(&mut env.formatted_text_store);
     let len = formatted_bytes.len();
@@ -254,7 +254,7 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
     len as u32
   }
 
-  fn host_get_error_text<TEnvironment: Environment>(mut env: FunctionEnvMut<ImportObjectEnvironmentV4<TEnvironment>>) -> u32 {
+  fn host_get_error_text<TEnvironment: Environment>(mut env: FunctionEnvMut<ImportObjectEnvironmentV5<TEnvironment>>) -> u32 {
     let env = env.data_mut();
     let error_text = std::mem::take(&mut env.error_text_store);
     let len = error_text.len();
@@ -262,7 +262,7 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
     len as u32
   }
 
-  fn host_has_cancelled<TEnvironment: Environment>(env: FunctionEnvMut<ImportObjectEnvironmentV4<TEnvironment>>) -> i32 {
+  fn host_has_cancelled<TEnvironment: Environment>(env: FunctionEnvMut<ImportObjectEnvironmentV5<TEnvironment>>) -> i32 {
     if env.data().token.as_ref().is_cancelled() {
       1
     } else {
@@ -270,7 +270,7 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
     }
   }
 
-  let env = ImportObjectEnvironmentV4 {
+  let env = ImportObjectEnvironmentV5 {
     environment,
     plugin_name,
     memory: None,
@@ -299,12 +299,12 @@ pub fn create_pools_import_object<TEnvironment: Environment>(
   )
 }
 
-pub struct InitializedWasmPluginInstanceV4 {
+pub struct InitializedWasmPluginInstanceV5 {
   wasm_functions: WasmFunctions,
   registered_config_ids: HashSet<FormatConfigId>,
 }
 
-impl InitializedWasmPluginInstanceV4 {
+impl InitializedWasmPluginInstanceV5 {
   pub fn new(store: Store, instance: WasmInstance) -> Result<Self> {
     let wasm_functions = WasmFunctions::new(store, instance)?;
     Ok(Self {
@@ -317,12 +317,12 @@ impl InitializedWasmPluginInstanceV4 {
     #[derive(serde::Serialize)]
     struct RawFormatConfig<'a> {
       pub plugin: &'a ConfigKeyMap,
-      pub global: &'a CommonConfiguration,
+      pub common: &'a CommonConfiguration,
     }
 
     let json = serde_json::to_string(&RawFormatConfig {
       plugin: &config.plugin,
-      global: &config.common,
+      common: &config.common,
     })?;
     self.send_string(&json)?;
     self.wasm_functions.register_config(config.id)?;
@@ -423,7 +423,7 @@ impl InitializedWasmPluginInstanceV4 {
   }
 }
 
-impl InitializedWasmPluginInstance for InitializedWasmPluginInstanceV4 {
+impl InitializedWasmPluginInstance for InitializedWasmPluginInstanceV5 {
   fn plugin_info(&mut self) -> Result<PluginInfo> {
     let len = self.wasm_functions.get_plugin_info()?;
     let json_bytes = self.receive_bytes(len)?;

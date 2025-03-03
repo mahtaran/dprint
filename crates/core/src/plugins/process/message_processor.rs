@@ -25,8 +25,8 @@ use crate::async_runtime::LocalBoxFuture;
 use crate::communication::MessageReader;
 use crate::communication::MessageWriter;
 use crate::communication::SingleThreadMessageWriter;
+use crate::configuration::CommonConfiguration;
 use crate::configuration::ConfigKeyMap;
-use crate::configuration::GlobalConfiguration;
 use crate::plugins::AsyncPluginHandler;
 use crate::plugins::FormatRequest;
 use crate::plugins::FormatResult;
@@ -98,9 +98,9 @@ pub async fn handle_process_stdio_messages<THandler: AsyncPluginHandler>(handler
             &context,
             message.id,
             async {
-              let global_config: GlobalConfiguration = serde_json::from_slice(&body.global_config)?;
+              let common_config: CommonConfiguration = serde_json::from_slice(&body.common_config)?;
               let config_map: ConfigKeyMap = serde_json::from_slice(&body.plugin_config)?;
-              let result = handler.resolve_config(config_map.clone(), global_config.clone()).await;
+              let result = handler.resolve_config(config_map.clone(), common_config.clone()).await;
               context.configs.store(
                 body.config_id.as_raw(),
                 Rc::new(StoredConfig {
@@ -108,7 +108,7 @@ pub async fn handle_process_stdio_messages<THandler: AsyncPluginHandler>(handler
                   file_matching: result.file_matching,
                   diagnostics: Rc::new(result.diagnostics),
                   config_map,
-                  global_config,
+                  common_config,
                 }),
               );
               Ok(MessageBody::Success(message.id))
@@ -185,7 +185,7 @@ pub async fn handle_process_stdio_messages<THandler: AsyncPluginHandler>(handler
                   for (key, value) in override_config_map {
                     config_map.insert(key, value);
                   }
-                  let result = handler.resolve_config(config_map, config.global_config.clone()).await;
+                  let result = handler.resolve_config(config_map, config.common_config.clone()).await;
                   Arc::new(result.config)
                 }
               }

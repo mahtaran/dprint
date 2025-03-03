@@ -1,4 +1,4 @@
-# Creating a Wasm Plugin (Schema Version 4)
+# Creating a Wasm Plugin (Schema Version 5)
 
 Wasm plugins are the preferred way of developing plugins (as opposed to process plugins) because they are portable and run sandboxed in a Wasm runtime. They can be written in any language that supports compiling to a WebAssembly file (_.wasm_)—emscripten solutions do not work.
 
@@ -40,8 +40,8 @@ Implementing a Wasm plugin is easier if you're using Rust as there are several h
    use anyhow::Result;
    use dprint_core::configuration::get_unknown_property_diagnostics;
    use dprint_core::configuration::get_value;
+   use dprint_core::configuration::CommonConfiguration;
    use dprint_core::configuration::ConfigKeyMap;
-   use dprint_core::configuration::GlobalConfiguration;
    use dprint_core::generate_plugin_code;
    use dprint_core::plugins::FileMatchingInfo;
    use dprint_core::plugins::PluginInfo;
@@ -69,11 +69,11 @@ Implementing a Wasm plugin is easier if you're using Rust as there are several h
        "License text goes here.".to_string()
      }
 
-     fn resolve_config(&mut self, config: ConfigKeyMap, global_config: &GlobalConfiguration) -> PluginResolveConfigurationResult<Configuration> {
+     fn resolve_config(&mut self, config: ConfigKeyMap, common_config: &CommonConfiguration) -> PluginResolveConfigurationResult<Configuration> {
        // implement this... for example
        let mut config = config;
        let mut diagnostics = Vec::new();
-       let line_width = get_value(&mut config, "line_width", global_config.line_width.unwrap_or(120), &mut diagnostics);
+       let line_width = get_value(&mut config, "line_width", common_config.line_width.unwrap_or(120), &mut diagnostics);
 
        diagnostics.extend(get_unknown_property_diagnostics(config));
 
@@ -121,7 +121,7 @@ To format code using a different plugin, call the `format_with_host(file_path, f
 
 For example, this function is used by the markdown plugin to format code blocks.
 
-## Schema Version 4 Overview
+## Schema Version 5 Overview
 
 If you are not using `Rust`, then you must implement a lot of low level functionality.
 
@@ -134,8 +134,8 @@ Low level communication:
 
 Initialization functions:
 
-- `dprint_plugin_version_4() -> u32` - Return `4`, but the CLI never calls this function (it only checks for it in the exports)
-- `register_config(config_id: u32)` - Called when the plugin and global configuration is done transferring over. Store it somewhere.
+- `dprint_plugin_version_5() -> u32` - Return `5`, but the CLI never calls this function (it only checks for it in the exports)
+- `register_config(config_id: u32)` - Called when the plugin and common configuration is done transferring over. Store it somewhere.
 - `release_config(config_id: u32)` - Release the config from memory.
 - `get_config_diagnostics(config_id: u32) -> u32` - Called by the CLI to get the configuration diagnostics. Serialize the diagnostics as a JSON string, store it in the local bytes, and return the byte length.
 - `get_resolved_config(config_id: u32) -> u32` - Called by the CLI to get the resolved configuration for display in the CLI. Serialize it as a JSON string, store it in the local bytes, and return the byte length.

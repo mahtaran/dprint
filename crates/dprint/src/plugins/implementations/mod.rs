@@ -47,7 +47,7 @@ mod test {
         for plugin in plugins {
           let format_config = Arc::new(FormatConfig {
             id: FormatConfigId::from_raw(1),
-            global: Default::default(),
+            common: Default::default(),
             plugin: Default::default(),
           });
           let instance = plugin.initialize().await.unwrap();
@@ -102,7 +102,7 @@ mod test {
         for plugin in plugins {
           let format_config = Arc::new(FormatConfig {
             id: FormatConfigId::from_raw(1),
-            global: Default::default(),
+            common: Default::default(),
             plugin: Default::default(),
           });
           let instance = plugin.initialize().await.unwrap();

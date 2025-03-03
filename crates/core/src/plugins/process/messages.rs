@@ -67,11 +67,11 @@ impl ProcessPluginMessage {
       message_ids::GET_LICENSE_TEXT_ID => MessageBody::GetLicenseText,
       message_ids::REGISTER_CONFIG_ID => {
         let config_id = FormatConfigId::from_raw(reader.read_u32()?);
-        let global_config = reader.read_sized_bytes()?;
+        let common_config = reader.read_sized_bytes()?;
         let plugin_config = reader.read_sized_bytes()?;
         MessageBody::RegisterConfig(RegisterConfigMessageBody {
           config_id,
-          global_config,
+          common_config,
           plugin_config,
         })
       }
@@ -191,7 +191,7 @@ impl Message for ProcessPluginMessage {
       MessageBody::RegisterConfig(body) => {
         writer.send_u32(message_ids::REGISTER_CONFIG_ID)?;
         writer.send_u32(body.config_id.as_raw())?;
-        writer.send_sized_bytes(&body.global_config)?;
+        writer.send_sized_bytes(&body.common_config)?;
         writer.send_sized_bytes(&body.plugin_config)?;
       }
       MessageBody::ReleaseConfig(config_id) => {
@@ -289,7 +289,7 @@ pub struct ResponseBody<T: std::fmt::Debug> {
 #[derive(Debug)]
 pub struct RegisterConfigMessageBody {
   pub config_id: FormatConfigId,
-  pub global_config: Vec<u8>,
+  pub common_config: Vec<u8>,
   pub plugin_config: Vec<u8>,
 }
 

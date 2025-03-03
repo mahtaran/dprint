@@ -1,6 +1,6 @@
 /// The plugin system schema version that is incremented
 /// when there are any breaking changes.
-pub const PLUGIN_SYSTEM_SCHEMA_VERSION: u32 = 4;
+pub const PLUGIN_SYSTEM_SCHEMA_VERSION: u32 = 5;
 
 #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 extern "C" {
@@ -352,7 +352,7 @@ pub mod macros {
             for (key, value) in override_config {
               plugin_config.insert(key, value);
             }
-            return WASM_PLUGIN.get().resolve_config(plugin_config, &config.global);
+            return WASM_PLUGIN.get().resolve_config(plugin_config, &config.common);
           }
         }
 
@@ -406,7 +406,7 @@ pub mod macros {
       static SHARED_BYTES: StaticCell<Vec<u8>> = StaticCell::new(Vec::new());
 
       #[no_mangle]
-      pub fn dprint_plugin_version_4() -> u32 {
+      pub fn dprint_plugin_version_5() -> u32 {
         dprint_core::plugins::wasm::PLUGIN_SYSTEM_SCHEMA_VERSION
       }
 

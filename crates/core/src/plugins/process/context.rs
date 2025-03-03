@@ -7,9 +7,9 @@ use tokio_util::sync::CancellationToken;
 use crate::communication::IdGenerator;
 use crate::communication::RcIdStore;
 use crate::communication::SingleThreadMessageWriter;
+use crate::configuration::CommonConfiguration;
 use crate::configuration::ConfigKeyMap;
 use crate::configuration::ConfigurationDiagnostic;
-use crate::configuration::GlobalConfiguration;
 use crate::plugins::FileMatchingInfo;
 use crate::plugins::FormatResult;
 
@@ -22,7 +22,7 @@ pub struct StoredConfig<TConfiguration: Serialize + Clone> {
   pub diagnostics: Rc<Vec<ConfigurationDiagnostic>>,
   pub file_matching: FileMatchingInfo,
   pub config_map: ConfigKeyMap,
-  pub global_config: GlobalConfiguration,
+  pub common_config: CommonConfiguration,
 }
 
 pub struct ProcessContext<TConfiguration: Serialize + Clone> {

@@ -43,8 +43,8 @@ Implementing a Process plugin is easy if you're using Rust as there are several 
    use dprint_core::async_runtime::LocalBoxFuture;
    use dprint_core::configuration::get_unknown_property_diagnostics;
    use dprint_core::configuration::get_value;
+   use dprint_core::configuration::CommonConfiguration;
    use dprint_core::configuration::ConfigKeyMap;
-   use dprint_core::configuration::GlobalConfiguration;
    use dprint_core::configuration::ResolveConfigurationResult;
    use dprint_core::plugins::AsyncPluginHandler;
    use dprint_core::plugins::FileMatchingInfo;
@@ -77,11 +77,11 @@ Implementing a Process plugin is easy if you're using Rust as there are several 
        include_str!("../LICENSE").to_string()
      }
 
-     async fn resolve_config(&self, config: ConfigKeyMap, global_config: GlobalConfiguration) -> PluginResolveConfigurationResult<Configuration> {
+     async fn resolve_config(&self, config: ConfigKeyMap, common_config: CommonConfiguration) -> PluginResolveConfigurationResult<Configuration> {
        // implement this... for example
        let mut config = config;
        let mut diagnostics = Vec::new();
-       let line_width = get_value(&mut config, "line_width", global_config.line_width.unwrap_or(120), &mut diagnostics);
+       let line_width = get_value(&mut config, "line_width", common_config.line_width.unwrap_or(120), &mut diagnostics);
 
        diagnostics.extend(get_unknown_property_diagnostics(config));
 
@@ -232,7 +232,7 @@ Message body:
 
 - u32 - Config id
 - u32 - Content length
-- JSON serialized global configuration
+- JSON serialized common configuration
 - u32 - Content length
 - JSON serialized plugin configuration
 

@@ -4,9 +4,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use dprint_core::async_runtime::async_trait;
+use dprint_core::configuration::CommonConfiguration;
 use dprint_core::configuration::ConfigKeyMap;
 use dprint_core::configuration::ConfigurationDiagnostic;
-use dprint_core::configuration::GlobalConfiguration;
 use dprint_core::plugins::process::HostFormatCallback;
 use dprint_core::plugins::CancellationToken;
 use dprint_core::plugins::CheckConfigUpdatesMessage;
@@ -31,7 +31,7 @@ pub trait Plugin: Send + Sync {
 pub struct FormatConfig {
   pub id: FormatConfigId,
   pub plugin: ConfigKeyMap,
-  pub global: GlobalConfiguration,
+  pub common: CommonConfiguration,
 }
 
 pub struct InitializedPluginFormatRequest {

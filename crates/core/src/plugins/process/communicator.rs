@@ -37,9 +37,9 @@ use crate::communication::MessageReader;
 use crate::communication::MessageWriter;
 use crate::communication::RcIdStore;
 use crate::communication::SingleThreadMessageWriter;
+use crate::configuration::CommonConfiguration;
 use crate::configuration::ConfigKeyMap;
 use crate::configuration::ConfigurationDiagnostic;
-use crate::configuration::GlobalConfiguration;
 use crate::plugins::ConfigChange;
 use crate::plugins::CriticalFormatError;
 use crate::plugins::FileMatchingInfo;
@@ -238,13 +238,13 @@ impl ProcessPluginCommunicator {
     }
   }
 
-  pub async fn register_config(&self, config_id: FormatConfigId, global_config: &GlobalConfiguration, plugin_config: &ConfigKeyMap) -> Result<()> {
-    let global_config = serde_json::to_vec(global_config)?;
+  pub async fn register_config(&self, config_id: FormatConfigId, common_config: &CommonConfiguration, plugin_config: &ConfigKeyMap) -> Result<()> {
+    let common_config = serde_json::to_vec(common_config)?;
     let plugin_config = serde_json::to_vec(plugin_config)?;
     self
       .send_with_acknowledgement(MessageBody::RegisterConfig(RegisterConfigMessageBody {
         config_id,
-        global_config,
+        common_config,
         plugin_config,
       }))
       .await?;

@@ -256,29 +256,29 @@ impl From<&str> for ConfigKeyValue {
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Debug, Default, Hash)]
 #[serde(rename_all = "camelCase")]
-pub struct GlobalConfiguration {
+pub struct CommonConfiguration {
   pub line_width: Option<u32>,
   pub use_tabs: Option<bool>,
   pub indent_width: Option<u8>,
   pub new_line_kind: Option<NewLineKind>,
 }
 
-pub const RECOMMENDED_GLOBAL_CONFIGURATION: RecommendedGlobalConfiguration = RecommendedGlobalConfiguration {
+pub const RECOMMENDED_COMMON_CONFIGURATION: RecommendedCommonConfiguration = RecommendedCommonConfiguration {
   line_width: 120,
   indent_width: 2,
   use_tabs: false,
   new_line_kind: NewLineKind::LineFeed,
 };
 
-pub struct RecommendedGlobalConfiguration {
+pub struct RecommendedCommonConfiguration {
   pub line_width: u32,
   pub use_tabs: bool,
   pub indent_width: u8,
   pub new_line_kind: NewLineKind,
 }
 
-impl From<RecommendedGlobalConfiguration> for GlobalConfiguration {
-  fn from(config: RecommendedGlobalConfiguration) -> Self {
+impl From<RecommendedCommonConfiguration> for CommonConfiguration {
+  fn from(config: RecommendedCommonConfiguration) -> Self {
     Self {
       line_width: Some(config.line_width),
       use_tabs: Some(config.use_tabs),
@@ -302,13 +302,13 @@ where
   pub config: T,
 }
 
-/// Resolves a collection of key value pairs to a GlobalConfiguration.
-pub fn resolve_global_config(config: &mut ConfigKeyMap) -> ResolveConfigurationResult<GlobalConfiguration> {
+/// Resolves a collection of key value pairs to a CommonConfiguration.
+pub fn resolve_common_config(config: &mut ConfigKeyMap) -> ResolveConfigurationResult<CommonConfiguration> {
   let mut diagnostics = Vec::new();
 
   let raw_new_line_kind = get_nullable_value::<RawNewLineKind>(config, "newLineKind", &mut diagnostics);
 
-  let resolved_config = GlobalConfiguration {
+  let resolved_config = CommonConfiguration {
     line_width: get_nullable_value(config, "lineWidth", &mut diagnostics),
     use_tabs: get_nullable_value(config, "useTabs", &mut diagnostics),
     indent_width: get_nullable_value(config, "indentWidth", &mut diagnostics),
@@ -464,7 +464,7 @@ mod test {
 
   #[test]
   fn get_default_config_when_empty() {
-    let config_result = resolve_global_config(&mut ConfigKeyMap::new());
+    let config_result = resolve_common_config(&mut ConfigKeyMap::new());
     let config = config_result.config;
     assert_eq!(config_result.diagnostics.len(), 0);
     assert_eq!(config.line_width, None);
@@ -475,13 +475,13 @@ mod test {
 
   #[test]
   fn get_values_when_filled() {
-    let mut global_config = ConfigKeyMap::from([
+    let mut common_config = ConfigKeyMap::from([
       (String::from("lineWidth"), ConfigKeyValue::from_i32(80)),
       (String::from("indentWidth"), ConfigKeyValue::from_i32(8)),
       (String::from("newLineKind"), ConfigKeyValue::from_str("crlf")),
       (String::from("useTabs"), ConfigKeyValue::from_bool(true)),
     ]);
-    let config_result = resolve_global_config(&mut global_config);
+    let config_result = resolve_common_config(&mut common_config);
     let config = config_result.config;
     assert_eq!(config_result.diagnostics.len(), 0);
     assert_eq!(config.line_width, Some(80));
@@ -492,8 +492,8 @@ mod test {
 
   #[test]
   fn get_diagnostic_for_invalid_enum_config() {
-    let mut global_config = ConfigKeyMap::from([(String::from("newLineKind"), ConfigKeyValue::from_str("something"))]);
-    let diagnostics = resolve_global_config(&mut global_config).diagnostics;
+    let mut common_config = ConfigKeyMap::from([(String::from("newLineKind"), ConfigKeyValue::from_str("something"))]);
+    let diagnostics = resolve_common_config(&mut common_config).diagnostics;
     assert_eq!(diagnostics.len(), 1);
     assert_eq!(diagnostics[0].message, "Found invalid value 'something'.");
     assert_eq!(diagnostics[0].property_name, "newLineKind");
@@ -501,8 +501,8 @@ mod test {
 
   #[test]
   fn get_diagnostic_for_invalid_primitive() {
-    let mut global_config = ConfigKeyMap::from([(String::from("useTabs"), ConfigKeyValue::from_str("something"))]);
-    let diagnostics = resolve_global_config(&mut global_config).diagnostics;
+    let mut common_config = ConfigKeyMap::from([(String::from("useTabs"), ConfigKeyValue::from_str("something"))]);
+    let diagnostics = resolve_common_config(&mut common_config).diagnostics;
     assert_eq!(diagnostics.len(), 1);
     assert_eq!(diagnostics[0].message, "provided string was not `true` or `false`");
     assert_eq!(diagnostics[0].property_name, "useTabs");
@@ -510,8 +510,8 @@ mod test {
 
   #[test]
   fn get_diagnostic_for_excess_property() {
-    let global_config = ConfigKeyMap::from([(String::from("something"), ConfigKeyValue::from_str("value"))]);
-    let diagnostics = get_unknown_property_diagnostics(global_config);
+    let common_config = ConfigKeyMap::from([(String::from("something"), ConfigKeyValue::from_str("value"))]);
+    let diagnostics = get_unknown_property_diagnostics(common_config);
     assert_eq!(diagnostics.len(), 1);
     assert_eq!(diagnostics[0].message, "Unknown property in configuration");
     assert_eq!(diagnostics[0].property_name, "something");

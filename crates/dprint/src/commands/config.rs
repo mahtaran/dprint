@@ -439,7 +439,7 @@ pub async fn output_resolved_config<TEnvironment: Environment>(
 ) -> Result<()> {
   let config = Rc::new(resolve_config_from_args(args, environment).await?);
   let plugins_scope = resolve_plugins_scope(config, environment, plugin_resolver).await?;
-  plugins_scope.ensure_no_global_config_diagnostics()?;
+  plugins_scope.ensure_no_common_config_diagnostics()?;
 
   let mut plugin_jsons = Vec::new();
   for plugin in plugins_scope.plugins.values() {
